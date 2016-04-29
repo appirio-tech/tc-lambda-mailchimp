@@ -1,5 +1,5 @@
 module.exports = {
-  // mailchimpAPIKey: process.env.MAILCHIMP_API_KEY,
+  mailchimpAPIKey: process.env.MAILCHIMP_API_KEY,
   region: 'us-east-1',
   description: "Lambda function to wrap Mailchimp API",
   handler: 'index.handler',

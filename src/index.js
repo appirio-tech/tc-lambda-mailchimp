@@ -46,6 +46,9 @@ exports.handler = function(event, context) {
       request(options, function (error, response, body) {
         if (!error && response.statusCode == 200) {
           console.log(body) // Show the HTML for the Google homepage.
+          context.succeed(wrapResponse(context, 200, null, pType, 1))
+        } else {
+          context.fail(new Error("500_INTERNAL_ERROR " + error.message))
         }
       })
       break
@@ -63,9 +66,15 @@ exports.handler = function(event, context) {
           'Authorization': 'apiKey ' + process.env.MAILCHIMP_API_KEY
         }
       };
+      console.log(process.env.mailchimpAPIKey)
+      console.log(process.env.MAILCHIMP_API_KEY)
+      console.log(context)
       request(listMembersUrl, function (error, response, body) {
         if (!error && response.statusCode == 200) {
           console.log(body) // Show the HTML for the Google homepage.
+          context.succeed(wrapResponse(context, 200, body, pType, 1))
+        } else {
+          context.fail(new Error("500_INTERNAL_ERROR " + error.message))
         }
       })
       break
@@ -84,24 +93,12 @@ function prepareSubscriptionBody(body) {
 }
 
 function wrapResponse(context, status, body, preferenceType, count) {
-  var data = body && body[preferenceType] ? body[preferenceType] : {}
-  var content = data
-  if (preferenceType && preferenceType.toLowerCase() === 'recentsearches') {
-    content = []
-    var prefArray = data.L ? data.L : []
-    prefArray.forEach(function(prefItem) {
-      content.push(prefItem.S)
-    })
-  }
   return {
     id: context.awsRequestId,
     result: {
       success: status === 200,
       status: status,
-      metadata: {
-        totalCount: count
-      },
-      content: content
+      content: body
     }
   }
 }
