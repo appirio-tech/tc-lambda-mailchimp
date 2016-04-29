@@ -5,7 +5,8 @@
   "main": "index.js",
   "dependencies": {
     "request": "^2.72.x",
-    "lodash": "^4.6.1"
+    "lodash": "^4.6.1",
+    "md5": "^2.0.0"
   },
   "devDependencies": {
     "aws-lambda-mock-context": "^1.1.0",
@@ -20,12 +21,7 @@
     "tc-lambda-gulp-tasks": "1.0.0"
   },
   "bundledDependencies": [
-    // "http-aws-es"
   ],
-  "scripts": {
-    // "test": "./node_modules/.bin/mocha src/**/*.spec.js",
-    // "test-lambda": "./node_modules/.bin/node-lambda run -h src/index.handler -j event.json"
-  },
   "author": "",
   "license": "ISC"
 }

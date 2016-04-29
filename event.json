@@ -1,7 +1,7 @@
 {
  "stage" : "test-invoke-stage",
  "requestId" : "test-invoke-request",
- "resourcePath" : "/v3/preferences",
+ "resourcePath" : "/v3/lists/12345/members",
  "resourceId" : "dxtdde",
  "httpMethod" : "GET",
  "sourceIp" : "test-invoke-source-ip",
