@@ -1,7 +1,8 @@
 /** == Imports == */
 var request = require('request'),
   _ = require('lodash'),
-  md5 = require('md5');
+  md5 = require('md5'),
+  jwt = require('jsonwebtoken');
 
 var querystring = require('querystring')
 
@@ -14,6 +15,22 @@ String.prototype.endsWith = function(str) {
   return (lastIndex !== -1) && (lastIndex + str.length === this.length);
 }
 
+var getSanitizedAuthorizationToken = function(token) {
+  var parsedToken = querystring.parse("token=" + token)
+  var parts = parsedToken.token.split(' ');
+  // Handle scenarios when the event.authorizationToken has 'Bearer ' schema
+  if (parts.length > 1) {
+    var schema = parts.shift().toLowerCase();
+    console.log(schema)
+    if (schema !== 'bearer') {
+      return null
+    }
+    return parts.shift();
+  } else {
+    return parsedToken.token;
+  }
+};
+
 /**
  * Entry point for lambda function handler
  */
@@ -24,21 +41,28 @@ exports.handler = function(event, context) {
   // convert query params to JSON
   switch (operation) {
     case 'ADD_MEMBER':
-      var listId = _.get(event, 'queryParams.listId', '')
+      var listId = _.get(event, 'params.path.listId', '')
       if (listId.trim().length === 0) {
         context.fail(new Error("400_BAD_REQUEST: 'listId' param is currently required"))
         break
       }
-      var emailAddress = _.get(event, 'body.email_address', '')
-      if (emailAddress.length == 0) {
-        context.fail(new Error("400_BAD_REQUEST: 'emailAddress' param is currently required"))
+      var userId = _.get(event, 'body.userId', -1)
+      if (!userId) {
+        context.fail(new Error("400_BAD_REQUEST: 'userId' param is currently required"))
         break
       }
+      var token = checkAuthorization(userId, event, context)
+      if (!token || !token.email) {
+        context.fail(new Error("400_BAD_REQUEST: Missing Email param in Auth token"))
+        break
+      }
+      var subscription = prepareSubscriptionBody(event, context)
+      subscription.email_address = token.email
       var listMembersUrl = MAILCHIMP_LISTS_URL + '/' + listId + '/members'
       var options = {
         uri: listMembersUrl,
         method: 'POST',
-        json: prepareSubscriptionBody(event.body),
+        json: subscription,
         headers: {
           'Authorization': 'apiKey ' + process.env.MAILCHIMP_API_KEY
         }
@@ -52,27 +76,36 @@ exports.handler = function(event, context) {
         } else if(!error && response.statusCode === 401) {
           context.fail(new Error("500_INTERNAL_ERROR " + "Unauthorized access to mailchimp"))
         } else {
-          context.fail(new Error("500_INTERNAL_ERROR " + error.message))
+          if (body && body.status && body.status === 404) {
+            context.fail(new Error("404_NOT_FOUND: Member or List not found"))
+          } else {
+            context.fail(new Error("500_INTERNAL_ERROR " + error))
+          }
         }
       })
       break
     case 'UPDATE_MEMBER':
-      var listId = _.get(event, 'queryParams.listId', '')
+      var listId = _.get(event, 'params.path.listId', '')
       if (listId.trim().length === 0) {
         context.fail(new Error("400_BAD_REQUEST: 'listId' param is currently required"))
         break
       }
-      var emailAddress = _.get(event, 'body.email_address', '')
-      if (emailAddress.length == 0) {
-        context.fail(new Error("400_BAD_REQUEST: 'emailAddress' param is currently required"))
+      var userId = _.get(event, 'body.userId', -1)
+      if (!userId) {
+        context.fail(new Error("400_BAD_REQUEST: 'userId' param is currently required"))
+        break
+      }
+      var token = checkAuthorization(userId, event, context)
+      if (!token || !token.email) {
+        context.fail(new Error("400_BAD_REQUEST: Missing Email param in Auth token"))
         break
       }
       var listMembersUrl = MAILCHIMP_LISTS_URL + '/' + listId + '/members/'
-      listMembersUrl += md5(emailAddress)
+      listMembersUrl += md5(token.email)
       var options = {
         uri: listMembersUrl,
         method: 'PUT',
-        json: prepareSubscriptionBody(event.body),
+        json: prepareSubscriptionBody(event, context),
         headers: {
           'Authorization': 'apiKey ' + process.env.MAILCHIMP_API_KEY
         }
@@ -84,25 +117,33 @@ exports.handler = function(event, context) {
         } else if(!error && response.statusCode === 401) {
           context.fail(new Error("500_INTERNAL_ERROR " + "Unauthorized access to mailchimp"))
         } else {
-          context.fail(new Error("500_INTERNAL_ERROR " + error.message))
+          if (body && body.status && body.status === 404) {
+            context.fail(new Error("404_NOT_FOUND: Member or List not found"))
+          } else {
+            context.fail(new Error("500_INTERNAL_ERROR " + error))
+          }
         }
       })
       break
     case 'VIEW_MEMBER':
       // make sure name param was passed is non-empty
-      var listId = _.get(event, 'queryParams.listId', '')
+      var listId = _.get(event, 'params.path.listId', '')
       if (listId.trim().length === 0) {
         context.fail(new Error("400_BAD_REQUEST: 'listId' param is currently required"));
         break;
       }
-      // make sure name param was passed is non-empty
-      var emailHash = _.get(event, 'queryParams.email', '')
-      if (emailHash.trim().length === 0) {
-        context.fail(new Error("400_BAD_REQUEST: 'email' param is currently required"));
-        break;
+      var userId = _.get(event, 'params.path.userId', -1)
+      if (!userId) {
+        context.fail(new Error("400_BAD_REQUEST: 'userId' param is currently required"))
+        break
+      }
+      var token = checkAuthorization(userId, event, context)
+      if (!token || !token.email) {
+        context.fail(new Error("400_BAD_REQUEST: Missing Email param in Auth token"))
+        break
       }
       var memberUrl = MAILCHIMP_LISTS_URL + '/' + listId + '/members/'
-      memberUrl += emailHash
+      memberUrl += md5(token.email)
       var options = {
         uri: memberUrl,
         method: 'GET',
@@ -110,38 +151,19 @@ exports.handler = function(event, context) {
           'Authorization': 'apiKey ' + process.env.MAILCHIMP_API_KEY
         }
       };
+
       request(options, function (error, response, body) {
         if (!error && response.statusCode == 200) {
           context.succeed(wrapResponse(context, 200, body, 1))
         } else if(!error && response.statusCode === 401) {
           context.fail(new Error("500_INTERNAL_ERROR " + "Unauthorized access to mailchimp"))
         } else {
-          context.fail(new Error("500_INTERNAL_ERROR " + error))
-        }
-      });
-      break
-    case 'LIST_MEMBERS':
-      // make sure name param was passed is non-empty
-      var listId = _.get(event, 'queryParams.listId', '')
-      if (listId.trim().length === 0) {
-        context.fail(new Error("400_BAD_REQUEST: 'listId' param is currently required"));
-        break;
-      }
-      var listMembersUrl = MAILCHIMP_LISTS_URL + '/' + listId + '/members'
-      var options = {
-        uri: listMembersUrl,
-        method: 'GET',
-        headers: {
-          'Authorization': 'apiKey ' + process.env.MAILCHIMP_API_KEY
-        }
-      };
-      request(options, function (error, response, body) {
-        if (!error && response.statusCode == 200) {
-          context.succeed(wrapResponse(context, 200, body, 1))
-        } else if(!error && response.statusCode === 401) {
-          context.fail(new Error("500_INTERNAL_ERROR " + "Unauthorized access to mailchimp"))
-        } else {
-          context.fail(new Error("500_INTERNAL_ERROR " + error))
+          console.log(body)
+          if (body && body.status && body.status === 404) {
+            context.fail(new Error("404_NOT_FOUND: Member or List not found"))
+          } else {
+            context.fail(new Error("500_INTERNAL_ERROR " + error))
+          }
         }
       });
       break
@@ -153,7 +175,23 @@ exports.handler = function(event, context) {
   }
 }
 
-function prepareSubscriptionBody(body) {
+function checkAuthorization(userId, event, context) {
+  var authHeader = _.get(event, 'params.header.Authorization', '')
+  if (authHeader.trim().length === 0) {
+    context.fail(new Error("401_UNAUTHORIZED: Missing Authorization"))
+    return
+  }
+  var token = getSanitizedAuthorizationToken(authHeader)
+  token = jwt.decode(token)
+  if (!token || !token.userId || token.userId != userId) {
+    context.fail(new Error("401_UNAUTHORIZED: Unauthorized access"))
+    return
+  }
+  return token
+}
+
+function prepareSubscriptionBody(event, context) {
+  var body = event.body
   body.email_type = 'html'
   body.status = 'subscribed'
   var mergeFields = {}
@@ -190,23 +228,22 @@ function wrapResponse(context, status, body, count) {
  * @return String operation
  */
 function getOperation(event, context) {
-  switch (event.httpMethod.toUpperCase()) {
+  var method = _.get(event, 'context.http-method', '')
+  var resourcePath = _.get(event, 'context.resource-path', '')
+  switch (method.toUpperCase()) {
     case 'GET':
-      if (event.resourcePath.endsWith('/members') || event.resourcePath.endsWith('/members/')) {
-        return 'LIST_MEMBERS'
-      }
       var regex = new RegExp(/\/members\/[a-zA-Z0-9]*/)
-      if (regex.test(event.resourcePath)) {
+      if (regex.test(resourcePath)) {
         return 'VIEW_MEMBER'
       }
       break
     case 'POST':
-      if (event.resourcePath.endsWith('/members') || event.resourcePath.endsWith('/members/')) {
+      if (resourcePath.endsWith('/members') || resourcePath.endsWith('/members/')) {
         return 'ADD_MEMBER'
       }
       break
     case 'PUT':
-      if (event.resourcePath.endsWith('/members') || event.resourcePath.endsWith('/members/')) {
+      if (resourcePath.endsWith('/members') || resourcePath.endsWith('/members/')) {
         return 'UPDATE_MEMBER'
       }
       break

@@ -6,7 +6,8 @@
   "dependencies": {
     "request": "^2.72.x",
     "lodash": "^4.6.1",
-    "md5": "^2.0.0"
+    "md5": "^2.0.0",
+    "jsonwebtoken": "^5.7.0"
   },
   "devDependencies": {
     "aws-lambda-mock-context": "^1.1.0",
