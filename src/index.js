@@ -100,12 +100,14 @@ exports.handler = function(event, context) {
         context.fail(new Error("400_BAD_REQUEST: Missing Email param in Auth token"))
         break
       }
+      var subscription = prepareSubscriptionBody(event, context)
+      subscription.email_address = token.email
       var listMembersUrl = MAILCHIMP_LISTS_URL + '/' + listId + '/members/'
       listMembersUrl += md5(token.email)
       var options = {
         uri: listMembersUrl,
         method: 'PUT',
-        json: prepareSubscriptionBody(event, context),
+        json: subscription,
         headers: {
           'Authorization': 'apiKey ' + process.env.MAILCHIMP_API_KEY
         }
@@ -153,12 +155,14 @@ exports.handler = function(event, context) {
       };
 
       request(options, function (error, response, body) {
+        console.log(body)
         if (!error && response.statusCode == 200) {
           context.succeed(wrapResponse(context, 200, body, 1))
         } else if(!error && response.statusCode === 401) {
           context.fail(new Error("500_INTERNAL_ERROR " + "Unauthorized access to mailchimp"))
+        } else if(!error && response.statusCode === 404) {
+          context.fail(new Error("404_NOT_FOUND: Member or List not found"))
         } else {
-          console.log(body)
           if (body && body.status && body.status === 404) {
             context.fail(new Error("404_NOT_FOUND: Member or List not found"))
           } else {
