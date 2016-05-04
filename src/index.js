@@ -236,7 +236,7 @@ function getOperation(event, context) {
   var resourcePath = _.get(event, 'context.resource-path', '')
   switch (method.toUpperCase()) {
     case 'GET':
-      var regex = new RegExp(/\/members\/[a-zA-Z0-9]*/)
+      var regex = new RegExp(/\/members\/\{userId\}/)
       if (regex.test(resourcePath)) {
         return 'VIEW_MEMBER'
       }
