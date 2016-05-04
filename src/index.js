@@ -134,7 +134,7 @@ exports.handler = function(event, context) {
         context.fail(new Error("400_BAD_REQUEST: 'listId' param is currently required"));
         break;
       }
-      var userId = _.get(event, 'params.path.userId', -1)
+      var userId = _.get(event, 'params.path.userId', '')
       if (!userId) {
         context.fail(new Error("400_BAD_REQUEST: 'userId' param is currently required"))
         break
