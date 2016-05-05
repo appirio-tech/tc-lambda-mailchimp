@@ -11,6 +11,11 @@ deploy:
   skip_cleanup: true
   script: "./deploy.sh"
   on:
+    branch: preferences
+- provider: script
+  skip_cleanup: true
+  script: "./deploy.sh"
+  on:
     branch: dev
 - provider: script
   skip_cleanup: true
