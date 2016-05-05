@@ -1,9 +1,16 @@
 {
-  "body" : {},
+  "body" : {
+    "userId" : "22688955",
+    "firstName": "Vikas",
+    "lastName": "Agarwal",
+    "interests": {
+      "4376e08f1e" : true,
+      "e0986266dc" : true
+    }
+  },
   "params" : {
     "path" : {
-      "listId" : "72cdd94102",
-       "userId" : "22688955"
+      "listId" : "72cdd94102"
     },
     "querystring" : {
     },
@@ -23,7 +30,7 @@
     "cognito-authentication-type" : "",
     "cognito-identity-id" : "",
     "cognito-identity-pool-id" : "",
-    "http-method" : "GET",
+    "http-method" : "PUT",
     "stage" : "test-invoke-stage",
     "source-ip" : "test-invoke-source-ip",
     "user" : "AIDAIMBY5G7X4KB6FEHDQ",
@@ -31,6 +38,6 @@
     "user-arn" : "arn:aws:iam::811668436784:user/vagarwal",
     "request-id" : "test-invoke-request",
     "resource-id" : "n8yh1t",
-    "resource-path" : "/v3/lists/72cdd94102/members/22688955"
+    "resource-path" : "/v3/lists/72cdd94102/members"
   }
 }
