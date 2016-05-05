@@ -2,13 +2,16 @@
 var request = require('request'),
   _ = require('lodash'),
   md5 = require('md5'),
-  jwt = require('jsonwebtoken');
+  jwt = require('jsonwebtoken'),
+  AWS = require('aws-sdk'),
+  Q = require('q');
 
 var querystring = require('querystring')
 
+var mailchimp = require('./mailchimp.service.js')
 
-var MAILCHIMP_URL = 'https://us13.api.mailchimp.com/3.0'
-var MAILCHIMP_LISTS_URL = MAILCHIMP_URL + '/lists'
+var dynamoDb = new AWS.DynamoDB()
+var docClient = new AWS.DynamoDB.DocumentClient()
 
 String.prototype.endsWith = function(str) {
   var lastIndex = this.lastIndexOf(str);
@@ -35,16 +38,16 @@ var getSanitizedAuthorizationToken = function(token) {
  * Entry point for lambda function handler
  */
 exports.handler = function(event, context) {
-  console.log('Received event:', JSON.stringify(event, null, 2));
+  // console.log('Received event:', JSON.stringify(event, null, 2));
   var operation = getOperation(event, context)
 
   // convert query params to JSON
   switch (operation) {
-    case 'ADD_MEMBER':
-      var listId = _.get(event, 'params.path.listId', '')
-      if (listId.trim().length === 0) {
-        context.fail(new Error("400_BAD_REQUEST: 'listId' param is currently required"))
-        break
+    case 'UPDATE_PREFERENCE':
+      var pType = _.get(event, 'params.path.preferenceType', '')
+      if (pType.trim().length === 0) {
+        context.fail(new Error("400_BAD_REQUEST: 'preferenceType' param is currently required"));
+        break;
       }
       var userId = _.get(event, 'body.userId', -1)
       if (!userId) {
@@ -52,86 +55,43 @@ exports.handler = function(event, context) {
         break
       }
       var token = checkAuthorization(userId, event, context)
-      if (!token || !token.email) {
-        context.fail(new Error("400_BAD_REQUEST: Missing Email param in Auth token"))
-        break
-      }
-      var subscription = prepareSubscriptionBody(event, context)
-      subscription.email_address = token.email
-      var listMembersUrl = MAILCHIMP_LISTS_URL + '/' + listId + '/members'
+
       var options = {
-        uri: listMembersUrl,
-        method: 'POST',
-        json: subscription,
-        headers: {
-          'Authorization': 'apiKey ' + process.env.MAILCHIMP_API_KEY
-        }
+        TableName: 'Preferences',
+        Key: {
+          objectId: objectId
+        },
+        UpdateExpression: 'set ' + pType + ' = :pType',
+        ReturnValues: 'UPDATED_NEW'
       };
-      request(options, function (error, response, body) {
-        console.log(body)
-        if (!error && response.statusCode == 200) {
-          context.succeed(wrapResponse(context, 200, null, 1))
-        } else if(!error && response.statusCode === 400) {
-          context.fail(new Error("400_INTERNAL_ERROR " + "Member already existing the target list"))
-        } else if(!error && response.statusCode === 401) {
-          context.fail(new Error("500_INTERNAL_ERROR " + "Unauthorized access to mailchimp"))
-        } else {
-          if (body && body.status && body.status === 404) {
-            context.fail(new Error("404_NOT_FOUND: Member or List not found"))
-          } else {
-            context.fail(new Error("500_INTERNAL_ERROR " + error))
-          }
-        }
-      })
-      break
-    case 'UPDATE_MEMBER':
-      var listId = _.get(event, 'params.path.listId', '')
-      if (listId.trim().length === 0) {
-        context.fail(new Error("400_BAD_REQUEST: 'listId' param is currently required"))
-        break
-      }
-      var userId = _.get(event, 'body.userId', -1)
-      if (!userId) {
-        context.fail(new Error("400_BAD_REQUEST: 'userId' param is currently required"))
-        break
-      }
-      var token = checkAuthorization(userId, event, context)
-      if (!token || !token.email) {
-        context.fail(new Error("400_BAD_REQUEST: Missing Email param in Auth token"))
-        break
-      }
-      var subscription = prepareSubscriptionBody(event, context)
-      subscription.email_address = token.email
-      var listMembersUrl = MAILCHIMP_LISTS_URL + '/' + listId + '/members/'
-      listMembersUrl += md5(token.email)
-      var options = {
-        uri: listMembersUrl,
-        method: 'PUT',
-        json: subscription,
-        headers: {
-          'Authorization': 'apiKey ' + process.env.MAILCHIMP_API_KEY
-        }
+      options.ExpressionAttributeValues = {
+        ':pType' : parsePreferenceBody(event.body)
       };
-      request(options, function (error, response, body) {
-        console.log(body)
-        if (!error && response.statusCode == 200) {
-          context.succeed(wrapResponse(context, 200, null, 1))
-        } else if(!error && response.statusCode === 401) {
-          context.fail(new Error("500_INTERNAL_ERROR " + "Unauthorized access to mailchimp"))
+      if (!checkParamsForPreference(preferenceType)) {
+        return
+      }
+
+      docClient.update(options,function(err) {
+        if(!err) {
+          afterPreferenceUpdate().then(function() {
+            context.succeed(wrapResponse(context, 200, null, pType, 1))
+          }).catch(function(err) {
+            // TODO reverse the db update
+            console.log('Error afterPreferenceGet: ' + err)
+            // ideally it should never land in this because as of now afterPreferenceUpdate is intented
+            // to be fire and forget
+          })
         } else {
-          if (body && body.status && body.status === 404) {
-            context.fail(new Error("404_NOT_FOUND: Member or List not found"))
-          } else {
-            context.fail(new Error("500_INTERNAL_ERROR " + error))
-          }
+          context.fail(new Error("500_INTERNAL_ERROR " + err.message))
         }
-      })
+      });
+      
       break
-    case 'VIEW_MEMBER':
+    case 'VIEW_PREFERENCE':
       // make sure name param was passed is non-empty
-      var listId = _.get(event, 'params.path.listId', '')
-      if (listId.trim().length === 0) {
-        context.fail(new Error("400_BAD_REQUEST: 'listId' param is currently required"));
+      var pType = _.get(event, 'params.path.preferenceType', '')
+      if (pType.trim().length === 0) {
+        context.fail(new Error("400_BAD_REQUEST: 'preferenceType' param is currently required"));
         break;
       }
       var userId = _.get(event, 'params.path.userId', '')
@@ -140,36 +100,35 @@ exports.handler = function(event, context) {
         break
       }
       var token = checkAuthorization(userId, event, context)
-      if (!token || !token.email) {
-        context.fail(new Error("400_BAD_REQUEST: Missing Email param in Auth token"))
-        break
-      }
-      var memberUrl = MAILCHIMP_LISTS_URL + '/' + listId + '/members/'
-      memberUrl += md5(token.email)
-      var options = {
-        uri: memberUrl,
-        method: 'GET',
-        headers: {
-          'Authorization': 'apiKey ' + process.env.MAILCHIMP_API_KEY
-        }
-      };
 
-      request(options, function (error, response, body) {
-        console.log(body)
-        if (!error && response.statusCode == 200) {
-          context.succeed(wrapResponse(context, 200, body, 1))
-        } else if(!error && response.statusCode === 401) {
-          context.fail(new Error("500_INTERNAL_ERROR " + "Unauthorized access to mailchimp"))
-        } else if(!error && response.statusCode === 404) {
-          context.fail(new Error("404_NOT_FOUND: Member or List not found"))
-        } else {
-          if (body && body.status && body.status === 404) {
-            context.fail(new Error("404_NOT_FOUND: Member or List not found"))
-          } else {
-            context.fail(new Error("500_INTERNAL_ERROR " + error))
+      var options = {
+        TableName : 'Preferences',
+        ConsistentRead: false,
+        // IndexName: 'objectId-index',
+        Select: 'SPECIFIC_ATTRIBUTES',
+        ProjectionExpression: 'objectId,' + pType,
+        ExpressionAttributeValues: {
+          ':objectId': {
+            S: userId
           }
+        },
+        KeyConditionExpression: '(objectId = :objectId)'
+      }
+      dynamoDb.query(options, function(err, data) {
+        if(!err && data && data.Items) { // TODO we can check for more than one matched records
+          var pref = data.Items.length > 0 ? data.Items[0] : null;
+          afterPreferenceGet(pType, event, context, token).then(function() {
+            console.log('Content', JSON.stringify(pref, null, 2))
+            context.succeed(wrapResponse(context, 200, pref, pType))
+          }).catch(function(err) {
+            console.log('Error afterPreferenceGet: ' + err)
+            // ideally it should never land in this because as of now afterPreferenceGet is intented
+            // to be fire and forget
+          })
+        } else {
+          context.fail(new Error("500_INTERNAL_ERROR " + err.message));
         }
-      });
+      })
       break
     case 'ping':
       context.succeed('pong');
@@ -194,31 +153,61 @@ function checkAuthorization(userId, event, context) {
   return token
 }
 
-function prepareSubscriptionBody(event, context) {
-  var body = event.body
-  body.email_type = 'html'
-  body.status = 'subscribed'
-  var mergeFields = {}
-  if (body.firstName) {
-    mergeFields.FNAME = body.firstName
+function checkParamsForPreference(pType, event, context, token) {
+  if (pType.toLowerCase() === 'email') {
+    if (!token || !token.email) {
+      context.fail(new Error("400_BAD_REQUEST: Missing Email param in Auth token"))
+      return false
+    }
   }
-  if (body.lastName) {
-    mergeFields.LNAME = body.lastName
-  }
-  if (body.firstName) {
-    mergeFields.FNAME = body.firstName
-  }
-  body.merge_fields = mergeFields
-  return body
+  return true
 }
 
-function wrapResponse(context, status, body, count) {
+function afterPreferenceUpdate(pType, event, context, token) {
+  var deferred = Q.defer();
+  if (pType.toLowerCase() === 'email') {
+    mailchimp.updateSubscriptions(token.email, event.body)
+    // fire and forget the mailchimp call and resolve promise immediately
+    deferred.resolve()
+  } else {// always resolve
+    deferred.resolve()
+  }
+  return deferred.promise
+}
+
+function afterPreferenceGet(pType, event, context, token) {
+  var deferred = Q.defer();
+  if (pType.toLowerCase() === 'email') {
+    console.log(token.email)
+    mailchimp.getSubscription(token.email)
+    // fire and forget the mailchimp call and resolve promise immediately
+    deferred.resolve()
+  } else {// always resolve
+    deferred.resolve()
+  }
+  return deferred.promise
+}
+
+function wrapResponse(context, status, body, pType) {
+  var data = body && body[pType] ? body[pType] : {}
+  var content = data
+  if (pType) {
+    if (pType.toLowerCase() === 'recentsearches') {
+      content = []
+      var prefArray = data.L ? data.L : []
+      prefArray.forEach(function(prefItem) {
+        content.push(prefItem.S)
+      })
+    } else if (pType.toLowerCase() === 'email') {
+      content = data.M
+    }
+  }
   return {
     id: context.awsRequestId,
     result: {
       success: status === 200,
       status: status,
-      content: JSON.parse(body)
+      content: content
     }
   }
 }
@@ -236,19 +225,21 @@ function getOperation(event, context) {
   var resourcePath = _.get(event, 'context.resource-path', '')
   switch (method.toUpperCase()) {
     case 'GET':
-      var regex = new RegExp(/\/members\/\{userId\}/)
+      var regex = new RegExp(/\/users\/\{userId\}\/preferences\/\{preferenceType\}/)
       if (regex.test(resourcePath)) {
-        return 'VIEW_MEMBER'
+        return 'VIEW_PREFERENCE'
       }
       break
     case 'POST':
-      if (resourcePath.endsWith('/members') || resourcePath.endsWith('/members/')) {
-        return 'ADD_MEMBER'
+      var regex = new RegExp(/\/users\/\{userId\}\/preferences\/\{preferenceType\}/)
+      if (regex.test(resourcePath)) {
+        return 'ADD_PERFERENCE'
       }
       break
     case 'PUT':
-      if (resourcePath.endsWith('/members') || resourcePath.endsWith('/members/')) {
-        return 'UPDATE_MEMBER'
+      var regex = new RegExp(/\/users\/\{userId\}\/preferences\/\{preferenceType\}/)
+      if (regex.test(resourcePath)) {
+        return 'UPDATE_PREFERENCE'
       }
       break
     default:

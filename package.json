@@ -1,13 +1,15 @@
 {
-  "name": "tc-mailchimp-lambda",
+  "name": "tc-preferences-lambda",
   "version": "1.0.0",
-  "description": "lambda function for Mailchimp api",
+  "description": "lambda function for preferences api",
   "main": "index.js",
   "dependencies": {
     "request": "^2.72.x",
     "lodash": "^4.6.1",
     "md5": "^2.0.0",
-    "jsonwebtoken": "^5.7.0"
+    "dynamodb-doc": "^1.0.0",
+    "jsonwebtoken": "^5.7.0",
+    "q": "^1.x"
   },
   "devDependencies": {
     "aws-lambda-mock-context": "^1.1.0",
