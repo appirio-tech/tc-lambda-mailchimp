@@ -8,9 +8,16 @@ var MAILCHIMP_URL = 'https://us13.api.mailchimp.com/3.0'
 var MAILCHIMP_LISTS_URL = MAILCHIMP_URL + '/lists'
 var TOPCODER_MEMBERS_LIST_ID = process.env.TOPCODER_MEMBERS_LIST_ID
 
+var TOPCODER_NL_GEN_ID = process.env.TOPCODER_NL_GEN_ID
+var TOPCODER_NL_DEV_ID = process.env.TOPCODER_NL_DEV_ID
+var TOPCODER_NL_DESIGN_ID = process.env.TOPCODER_NL_DESIGN_ID
+var TOPCODER_NL_DATA_ID = process.env.TOPCODER_NL_DATA_ID
+var TOPCODER_NL_TCO_ID = process.env.TOPCODER_NL_TCO_ID
+var TOPCODER_NL_IOS_ID = process.env.TOPCODER_NL_IOS_ID
 
-exports.updateSubscriptions = function(email, body) {
-  var subscription = prepareSubscriptionBody(body)
+
+exports.updateSubscriptions = function(email, data) {
+  var subscription = prepareSubscriptionBody(data)
   subscription.email_address = token.email
   var listMembersUrl = MAILCHIMP_LISTS_URL + '/' + TOPCODER_MEMBERS_LIST_ID + '/members/'
   listMembersUrl += md5(email)
@@ -71,19 +78,42 @@ exports.getSubscription = function(email) {
   return deferred.promise
 }
 
-function prepareSubscriptionBody(body, context) {
-  body.email_type = 'html'
-  body.status = 'subscribed'
+function prepareSubscriptionBody(data, context) {
+  data.email_type = 'html'
+  data.status = 'subscribed'
   var mergeFields = {}
-  if (body.firstName) {
-    mergeFields.FNAME = body.firstName
+  if (data.firstName) {
+    mergeFields.FNAME = data.firstName
   }
-  if (body.lastName) {
-    mergeFields.LNAME = body.lastName
+  if (data.lastName) {
+    mergeFields.LNAME = data.lastName
   }
-  if (body.firstName) {
-    mergeFields.FNAME = body.firstName
+  if (data.firstName) {
+    mergeFields.FNAME = data.firstName
   }
-  body.merge_fields = mergeFields
-  return body
+  data.merge_fields = mergeFields
+
+  if (data.subscriptions) {
+    data.interests = {}
+    if (data.subscriptions.hasOwnProperty('TOPCODER_NL_GEN')) {
+      data.interests[TOPCODER_NL_GEN_ID] = data.subscriptions['TOPCODER_NL_GEN']
+    }
+    if (data.subscriptions.hasOwnProperty('TOPCODER_NL_DEV')) {
+      data.interests[TOPCODER_NL_DEV_ID] = data.subscriptions['TOPCODER_NL_DEV']
+    }
+    if (data.subscriptions.hasOwnProperty('TOPCODER_NL_DESIGN')) {
+      data.interests[TOPCODER_NL_DESIGN_ID] = data.subscriptions['TOPCODER_NL_DESIGN']
+    }
+    if (data.subscriptions.hasOwnProperty('TOPCODER_NL_DATA')) {
+      data.interests[TOPCODER_NL_DATA_ID] = data.subscriptions['TOPCODER_NL_DATA']
+    }
+    if (data.subscriptions.hasOwnProperty('TOPCODER_NL_TCO')) {
+      data.interests[TOPCODER_NL_TCO_ID] = data.subscriptions['TOPCODER_NL_TCO']
+    }
+    if (data.subscriptions.hasOwnProperty('TOPCODER_NL_IOS')) {
+      data.interests[TOPCODER_NL_IOS_ID] = data.subscriptions['TOPCODER_NL_IOS']
+    }
+  }
+
+  return data
 }
