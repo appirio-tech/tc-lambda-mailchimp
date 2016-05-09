@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ "$TRAVIS_BRANCH" = "dev" ]; then
+if [ "$TRAVIS_BRANCH" = "preferences" ]; then
   export MAILCHIMP_API_KEY=$DEV_MAILCHIMP_API_KEY
   export TOPCODER_NL_GEN_ID=$DEV_TOPCODER_NL_GEN_ID
   export TOPCODER_NL_DEV_ID=$DEV_TOPCODER_NL_DEV_ID
