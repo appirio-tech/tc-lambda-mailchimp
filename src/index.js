@@ -81,7 +81,7 @@ exports.handler = function(event, context) {
       docClient.update(options, function(err) {
         if(!err) {
           afterPreferenceUpdate(pType, event, context, token).then(function() {
-            context.succeed(wrapResponse(context, 200, null, pType, 1))
+            context.succeed(wrapResponse(context, 200, null, pType))
           }).catch(function(err) {
             // TODO reverse the db update
             console.log('Error afterPreferenceGet: ' + err)
@@ -118,8 +118,8 @@ exports.handler = function(event, context) {
       console.log(options)
       docClient.get(options, function(err, data) {
         console.log(data)
-        if(!err && data && data.Items) { // TODO we can check for more than one matched records
-          var pref = data.Items.length > 0 ? data.Items[0] : null;
+        if(!err && data && data.Item) { // TODO we can check for more than one matched records
+          var pref = data.Item;
           console.log(data)
           afterPreferenceGet(pType, event, context, token).then(function() {
             console.log('Content', JSON.stringify(pref, null, 2))

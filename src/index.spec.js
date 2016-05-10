@@ -160,17 +160,15 @@ describe('When receiving a valid search request for email settings', function() 
   }
   DocumentClient.get = function(options, callback) {
     callback.apply(DocumentClient, [null, {
-      Items: [
-        {
-          email: {
-            M : {
-              'TOPCODER_NL_DEV' : true,
-              'TOPCODER_NL_DESIGN' : true,
-              'TOPCODER_NL_DATA' : false
-            }
+      Item: {
+        email: {
+          M : {
+            'TOPCODER_NL_DEV' : true,
+            'TOPCODER_NL_DESIGN' : true,
+            'TOPCODER_NL_DATA' : false
           }
         }
-      ]
+      }
     }])
   }
   sinon.stub(mailchimp, 'getSubscription', function(email) {
