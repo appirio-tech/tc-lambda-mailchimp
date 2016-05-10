@@ -117,6 +117,7 @@ exports.handler = function(event, context) {
       }
       console.log(options)
       docClient.get(options, function(err, data) {
+        console.log(data)
         if(!err && data && data.Items) { // TODO we can check for more than one matched records
           var pref = data.Items.length > 0 ? data.Items[0] : null;
           console.log(data)
