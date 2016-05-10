@@ -162,11 +162,9 @@ describe('When receiving a valid search request for email settings', function() 
     callback.apply(DocumentClient, [null, {
       Item: {
         email: {
-          M : {
-            'TOPCODER_NL_DEV' : true,
-            'TOPCODER_NL_DESIGN' : true,
-            'TOPCODER_NL_DATA' : false
-          }
+          'TOPCODER_NL_DEV' : true,
+          'TOPCODER_NL_DESIGN' : true,
+          'TOPCODER_NL_DATA' : false
         }
       }
     }])
@@ -227,6 +225,7 @@ describe('When receiving a valid search request for email settings', function() 
       expect(result.status).to.equal(200)
       expect(resp.success.result).to.not.be.null
       expect(result.content).to.exist
+      console.log(result)
       expect(result.content['TOPCODER_NL_DEV']).to.be.true
       expect(result.content['TOPCODER_NL_DESIGN']).to.be.true
       expect(result.content['TOPCODER_NL_DATA']).to.be.false

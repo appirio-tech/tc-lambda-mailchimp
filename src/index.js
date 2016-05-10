@@ -219,7 +219,7 @@ function wrapResponse(context, status, body, pType) {
         content.push(prefItem.S)
       })
     } else if (pType.toLowerCase() === 'email') {
-      content = data.M
+      content = data
     }
   }
   return {
