@@ -1,16 +1,17 @@
 {
   "body" : {
-    "userId" : "22688955",
     "firstName": "Vikas",
     "lastName": "Agarwal",
-    "interests": {
-      "4376e08f1e" : true,
-      "e0986266dc" : true
+    "subscriptions": {
+      "TOPCODER_NL_DESIGN" : true,
+      "TOPCODER_NL_DEV" : false,
+      "TOPCODER_NL_TCO" : true
     }
   },
   "params" : {
     "path" : {
-      "listId" : "72cdd94102"
+      "userId" : "22688955",
+      "preferenceType": "email"
     },
     "querystring" : {
     },
@@ -38,6 +39,6 @@
     "user-arn" : "arn:aws:iam::811668436784:user/vagarwal",
     "request-id" : "test-invoke-request",
     "resource-id" : "n8yh1t",
-    "resource-path" : "/v3/lists/72cdd94102/members"
+    "resource-path" : "/v3/users/{userId}/preferences/{preferenceType}"
   }
 }

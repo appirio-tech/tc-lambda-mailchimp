@@ -1,36 +1,34 @@
 {
-  "body" : {},
-  "params" : {
-    "path" : {
-      "listId" : "72cdd94102",
-       "userId" : "22688955"
+  "body": {},
+  "params": {
+    "path": {
+      "preferenceType": "email",
+      "userId": "22688955"
     },
-    "querystring" : {
-    },
-    "header" : {
-      "Authorization" : "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJyb2xlcyI6W10sImlzcyI6Imh0dHBzOi8vYXBpLnRvcGNvZGVyLWRldi5jb20iLCJoYW5kbGUiOiJ2aWthc3JvaGl0IiwiZXhwIjoxNDYyMTc1NTM3LCJ1c2VySWQiOiIyMjY4ODk1NSIsImlhdCI6MTQ2MjE3NDkzNywiZW1haWwiOiJlbWFpbEBkb21haW4uY29tLnoiLCJqdGkiOiJjZjZlNTVhOC01MGU2LTQwM2ItODUwNC03YzNkNTlhMmJjNWQifQ.0s8HXhbZJQ1nvKDpiqKUyyP17wijVx48HSIticU2dnw"
+    "querystring": {},
+    "header": {
+      "Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJyb2xlcyI6W10sImlzcyI6Imh0dHBzOi8vYXBpLnRvcGNvZGVyLWRldi5jb20iLCJoYW5kbGUiOiJ2aWthc3JvaGl0IiwiZXhwIjoxNDYyMTc1NTM3LCJ1c2VySWQiOiIyMjY4ODk1NSIsImlhdCI6MTQ2MjE3NDkzNywiZW1haWwiOiJlbWFpbEBkb21haW4uY29tLnoiLCJqdGkiOiJjZjZlNTVhOC01MGU2LTQwM2ItODUwNC03YzNkNTlhMmJjNWQifQ.0s8HXhbZJQ1nvKDpiqKUyyP17wijVx48HSIticU2dnw"
     }
   },
-  "stage-variables" : {
-  },
-  "context" : {
-    "account-id" : "811668436784",
-    "api-id" : "bd1cmoh5ag",
-    "api-key" : "test-invoke-api-key",
-    "authorizer-principal-id" : "",
-    "caller" : "AIDAIMBY5G7X4KB6FEHDQ",
-    "cognito-authentication-provider" : "",
-    "cognito-authentication-type" : "",
-    "cognito-identity-id" : "",
-    "cognito-identity-pool-id" : "",
-    "http-method" : "GET",
-    "stage" : "test-invoke-stage",
-    "source-ip" : "test-invoke-source-ip",
-    "user" : "AIDAIMBY5G7X4KB6FEHDQ",
-    "user-agent" : "Apache-HttpClient/4.3.4 (java 1.5)",
-    "user-arn" : "arn:aws:iam::811668436784:user/vagarwal",
-    "request-id" : "test-invoke-request",
-    "resource-id" : "n8yh1t",
-    "resource-path" : "/v3/lists/72cdd94102/members/22688955"
+  "stage-variables": {},
+  "context": {
+    "account-id": "811668436784",
+    "api-id": "bd1cmoh5ag",
+    "api-key": "test-invoke-api-key",
+    "authorizer-principal-id": "",
+    "caller": "AIDAIMBY5G7X4KB6FEHDQ",
+    "cognito-authentication-provider": "",
+    "cognito-authentication-type": "",
+    "cognito-identity-id": "",
+    "cognito-identity-pool-id": "",
+    "http-method": "GET",
+    "stage": "test-invoke-stage",
+    "source-ip": "test-invoke-source-ip",
+    "user": "AIDAIMBY5G7X4KB6FEHDQ",
+    "user-agent": "Apache-HttpClient/4.3.4 (java 1.5)",
+    "user-arn": "arn:aws:iam::811668436784:user/vagarwal",
+    "request-id": "test-invoke-request",
+    "resource-id": "n8yh1t",
+    "resource-path": "/v3/users/{userId}/preferences/{preferenceType}"
   }
 }
