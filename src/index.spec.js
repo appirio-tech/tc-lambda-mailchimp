@@ -158,6 +158,21 @@ describe('When receiving a valid search request for email settings', function() 
       ]
     }])
   }
+  DocumentClient.get = function(options, callback) {
+    callback.apply(DocumentClient, [null, {
+      Items: [
+        {
+          email: {
+            M : {
+              'TOPCODER_NL_DEV' : true,
+              'TOPCODER_NL_DESIGN' : true,
+              'TOPCODER_NL_DATA' : false
+            }
+          }
+        }
+      ]
+    }])
+  }
   sinon.stub(mailchimp, 'getSubscription', function(email) {
     var deferred = Q.defer();
     if (email === 'email@domain.com.z') {
@@ -204,7 +219,7 @@ describe('When receiving a valid search request for email settings', function() 
   }, ctx, resp)
 
   describe('then success response ', function() {
-    var spy = sinon.spy(DynamoDB, 'query')
+    var spy = sinon.spy(DocumentClient, 'get')
     it('should be a valid response', function() {
       var result = resp.success.result
       expect(spy.calledOnce).to.be.true
