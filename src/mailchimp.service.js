@@ -18,7 +18,7 @@ var TOPCODER_NL_IOS_ID = process.env.TOPCODER_NL_IOS_ID
 
 exports.updateSubscriptions = function(email, data) {
   var subscription = prepareSubscriptionBody(data)
-  subscription.email_address = token.email
+  subscription.email_address = email
   var listMembersUrl = MAILCHIMP_LISTS_URL + '/' + TOPCODER_MEMBERS_LIST_ID + '/members/'
   listMembersUrl += md5(email)
   var options = {
@@ -29,6 +29,7 @@ exports.updateSubscriptions = function(email, data) {
       'Authorization': 'apiKey ' + process.env.MAILCHIMP_API_KEY
     }
   }
+  console.log(options)
   var deferred = Q.defer();
   request(options, function (error, response, body) {
     console.log(body)
@@ -50,6 +51,7 @@ exports.updateSubscriptions = function(email, data) {
 exports.getSubscription = function(email) {
   var memberUrl = MAILCHIMP_LISTS_URL + '/' + TOPCODER_MEMBERS_LIST_ID + '/members/'
   memberUrl += md5(email)
+  console.log(memberUrl)
   var options = {
     uri: memberUrl,
     method: 'GET',

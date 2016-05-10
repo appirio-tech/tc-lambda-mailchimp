@@ -47,33 +47,40 @@ exports.handler = function(event, context) {
       var pType = _.get(event, 'params.path.preferenceType', '')
       if (pType.trim().length === 0) {
         context.fail(new Error("400_BAD_REQUEST: 'preferenceType' param is currently required"));
-        break;
+        return
       }
-      var userId = _.get(event, 'body.userId', -1)
+      var userId = _.get(event, 'params.path.userId', '')
       if (!userId) {
         context.fail(new Error("400_BAD_REQUEST: 'userId' param is currently required"))
-        break
+        return
       }
       var token = checkAuthorization(userId, event, context)
 
-      var options = {
-        TableName: 'Preferences',
-        Key: {
-          objectId: objectId
-        },
-        UpdateExpression: 'set ' + pType + ' = :pType',
-        ReturnValues: 'UPDATED_NEW'
-      };
-      options.ExpressionAttributeValues = {
-        ':pType' : parsePreferenceBody(event.body)
-      };
-      if (!checkParamsForPreference(preferenceType)) {
+      if (!token) {
         return
       }
 
-      docClient.update(options,function(err) {
+      var options = {
+        TableName: 'Preferences',
+        ReturnValues: 'UPDATED_NEW',
+        Key: {
+          objectId : userId,
+        },
+        AttributeUpdates : {}
+      };
+      options.AttributeUpdates[pType] = {
+        Action: 'PUT',
+        Value: parsePreferenceBody(event.body, userId, pType)
+      }
+
+      console.log(options)
+      if (!checkParamsForPreference(pType, event, context, token)) {
+        return
+      }
+
+      docClient.update(options, function(err) {
         if(!err) {
-          afterPreferenceUpdate().then(function() {
+          afterPreferenceUpdate(pType, event, context, token).then(function() {
             context.succeed(wrapResponse(context, 200, null, pType, 1))
           }).catch(function(err) {
             // TODO reverse the db update
@@ -103,20 +110,16 @@ exports.handler = function(event, context) {
 
       var options = {
         TableName : 'Preferences',
-        ConsistentRead: false,
-        // IndexName: 'objectId-index',
-        Select: 'SPECIFIC_ATTRIBUTES',
-        ProjectionExpression: 'objectId,' + pType,
-        ExpressionAttributeValues: {
-          ':objectId': {
-            S: userId
-          }
-        },
-        KeyConditionExpression: '(objectId = :objectId)'
+        AttributesToGet : ['objectId', pType],
+        Key: {
+          objectId : userId
+        }
       }
-      dynamoDb.query(options, function(err, data) {
+      console.log(options)
+      docClient.get(options, function(err, data) {
         if(!err && data && data.Items) { // TODO we can check for more than one matched records
           var pref = data.Items.length > 0 ? data.Items[0] : null;
+          console.log(data)
           afterPreferenceGet(pType, event, context, token).then(function() {
             console.log('Content', JSON.stringify(pref, null, 2))
             context.succeed(wrapResponse(context, 200, pref, pType))
@@ -186,6 +189,22 @@ function afterPreferenceGet(pType, event, context, token) {
     deferred.resolve()
   }
   return deferred.promise
+}
+
+function parsePreferenceBody(body, userId, pType) {
+  if (pType) {
+    if (pType.toLowerCase() === 'recentsearches') {
+      console.log(body.recentSearches)
+      return body.recentSearches
+    }
+    if (pType.toLowerCase() === 'searchtabs') {
+      console.log(body.searchTabs)
+      return body.searchTabs
+    }
+    if (pType.toLowerCase() === 'email') {
+      return body.subscriptions
+    }
+  }
 }
 
 function wrapResponse(context, status, body, pType) {
