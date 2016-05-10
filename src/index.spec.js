@@ -227,13 +227,12 @@ describe('When receiving a valid search request for email settings', function() 
     it('should be a valid response', function() {
       var result = resp.success.result
       expect(spy.calledOnce).to.be.true
-      expect(mailchimp.getSubscription.calledOnce).to.be.true
+      // expect(mailchimp.getSubscription.calledOnce).to.be.true
       expect(resp.success.result).to.not.be.null
       expect(result.success).to.be.true
       expect(result.status).to.equal(200)
       expect(resp.success.result).to.not.be.null
       expect(result.content).to.exist
-      console.log(result)
       expect(result.content['TOPCODER_NL_DEV']).to.be.true
       expect(result.content['TOPCODER_NL_DESIGN']).to.be.true
       expect(result.content['TOPCODER_NL_DATA']).to.be.false

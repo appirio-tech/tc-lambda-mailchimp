@@ -181,32 +181,8 @@ function afterPreferenceUpdate(pType, event, context, token) {
 function afterPreferenceGet(pref, pType, event, context, token) {
   var deferred = Q.defer();
   if (pType.toLowerCase() === 'email') {
-    var emailPref = pref[pType]
-    var now = new Date().valueOf()
-    console.log(emailPref.lastSyncTime)
-    if (emailPref.lastSyncTime && (now - emailPref.lastSyncTime) > 7*24*60*60*1000 ) {
-      mailchimp.getSubscription(token.email).then(function(subscriptions) {
-        subscriptions.lastSyncTime = now
-        var options = {
-          TableName: 'Preferences',
-          ReturnValues: 'UPDATED_NEW',
-          Key: {
-            objectId : token.userId,
-          },
-          AttributeUpdates : {}
-        }
-        options.AttributeUpdates[pType] = {
-          Action: 'PUT',
-          Value: subscriptions
-        }
-        docClient.update(options, function(err, data) {
-          // resolve the promise alway, irrespective of the error or success
-          deferred.resolve({ email: subscriptions })
-        })
-      })
-    } else {
-      deferred.resolve(pref)
-    }
+    // TODO we can resync dynamodb with mailchimp here based on last sync date
+    deferred.resolve(pref)
   } else {// always resolve
     deferred.resolve(pref)
   }
@@ -222,7 +198,6 @@ function parsePreferenceBody(body, userId, pType) {
       return body.searchTabs
     }
     if (pType.toLowerCase() === 'email') {
-      body.subscriptions.lastSyncTime = new Date().valueOf()
       return body.subscriptions
     }
   }
