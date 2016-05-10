@@ -164,15 +164,23 @@ describe('When receiving a valid search request for email settings', function() 
         email: {
           'TOPCODER_NL_DEV' : true,
           'TOPCODER_NL_DESIGN' : true,
-          'TOPCODER_NL_DATA' : false
+          'TOPCODER_NL_DATA' : false,
+          lastSyncTime: new Date().valueOf() - 8*24*60*60*1000
         }
       }
     }])
   }
+  DocumentClient.update = function(options, callback) {
+    callback.apply(DocumentClient, [null, options.AttributeUpdates.email.Value])
+  }
   sinon.stub(mailchimp, 'getSubscription', function(email) {
     var deferred = Q.defer();
     if (email === 'email@domain.com.z') {
-      deferred.resolve({id: '12345', email_address: 'hassubscription@topcoder.com'}) 
+      deferred.resolve({
+        'TOPCODER_NL_DEV' : true,
+        'TOPCODER_NL_DESIGN' : true,
+        'TOPCODER_NL_DATA' : false
+      }) 
     } else {
       deferred.reject(new Error("404_NOT_FOUND"))
     }
