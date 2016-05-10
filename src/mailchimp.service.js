@@ -17,7 +17,7 @@ var TOPCODER_NL_IOS_ID = process.env.TOPCODER_NL_IOS_ID
 
 
 exports.updateSubscriptions = function(email, data) {
-  var subscription = prepareSubscriptionBody(data)
+  var subscription = prepareSubscriptionRequest(data)
   subscription.email_address = email
   var listMembersUrl = MAILCHIMP_LISTS_URL + '/' + TOPCODER_MEMBERS_LIST_ID + '/members/'
   listMembersUrl += md5(email)
@@ -63,7 +63,7 @@ exports.getSubscription = function(email) {
   request(options, function (error, response, body) {
     console.log(body)
     if (!error && response.statusCode == 200) {
-      deferred.resolve(body)
+      deferred.resolve(parseSubscription(body))
     } else if(!error && response.statusCode === 401) {
       deferred.reject(new Error("500_INTERNAL_ERROR " + "Unauthorized access to mailchimp"))
     } else if(!error && response.statusCode === 404) {
@@ -79,7 +79,39 @@ exports.getSubscription = function(email) {
   return deferred.promise
 }
 
-function prepareSubscriptionBody(data, context) {
+function parseSubscription(resp) {
+  var subscription = {
+    'TOPCODER_NL_GEN' : false,
+    'TOPCODER_NL_DEV' : false,
+    'TOPCODER_NL_DESIGN' : false,
+    'TOPCODER_NL_DATA' : false,
+    'TOPCODER_NL_TCO' : false,
+    'TOPCODER_NL_IOS' : false
+  }
+  if (resp && resp.interests) {
+    if (resp.interests[TOPCODER_NL_GEN_ID]) {
+      subscription['TOPCODER_NL_GEN'] = true
+    }
+    if (resp.interests[TOPCODER_NL_DEV_ID]) {
+      subscription['TOPCODER_NL_DEV'] = true
+    }
+    if (resp.interests[TOPCODER_NL_DESIGN_ID]) {
+      subscription['TOPCODER_NL_DESIGN'] = true
+    }
+    if (resp.interests[TOPCODER_NL_DATA_ID]) {
+      subscription['TOPCODER_NL_DATA'] = true
+    }
+    if (resp.interests[TOPCODER_NL_TCO_ID]) {
+      subscription['TOPCODER_NL_TCO'] = true
+    }
+    if (resp.interests[TOPCODER_NL_IOS_ID]) {
+      subscription['TOPCODER_NL_IOS'] = true
+    }
+  }
+  return subscription
+}
+
+function prepareSubscriptionRequest(data, context) {
   data.email_type = 'html'
   data.status = 'subscribed'
   var mergeFields = {}

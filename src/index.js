@@ -120,9 +120,9 @@ exports.handler = function(event, context) {
         console.log(data)
         if(!err && data && data.Item) { // TODO we can check for more than one matched records
           var pref = data.Item;
-          afterPreferenceGet(pType, event, context, token).then(function() {
-            console.log('Content', JSON.stringify(pref, null, 2))
-            context.succeed(wrapResponse(context, 200, pref, pType))
+          afterPreferenceGet(pref, pType, event, context, token).then(function(p) {
+            console.log('Content', JSON.stringify(p, null, 2))
+            context.succeed(wrapResponse(context, 200, p, pType))
           }).catch(function(err) {
             console.log('Error afterPreferenceGet: ' + err)
             // ideally it should never land in this because as of now afterPreferenceGet is intented
@@ -172,23 +172,39 @@ function afterPreferenceUpdate(pType, event, context, token) {
     mailchimp.updateSubscriptions(token.email, event.body).then(function() {
       deferred.resolve()
     })
-    // fire and forget the mailchimp call and resolve promise immediately
-    // deferred.resolve()
   } else {// always resolve
     deferred.resolve()
   }
   return deferred.promise
 }
 
-function afterPreferenceGet(pType, event, context, token) {
+function afterPreferenceGet(pref, pType, event, context, token) {
   var deferred = Q.defer();
   if (pType.toLowerCase() === 'email') {
-    console.log(token.email)
-    mailchimp.getSubscription(token.email)
-    // fire and forget the mailchimp call and resolve promise immediately
-    deferred.resolve()
+    var now = new Date().valueOf()
+    if (pref.lastSyncTime && (now - pref.lastSyncTime) > 7*24*60*60*1000 ) {
+      var subscriptions = mailchimp.getSubscription(token.email)
+      var options = {
+        TableName: 'Preferences',
+        ReturnValues: 'UPDATED_NEW',
+        Key: {
+          objectId : token.userId,
+        },
+        AttributeUpdates : {}
+      };
+      options.AttributeUpdates[pType] = {
+        Action: 'PUT',
+        Value: subscriptions
+      }
+      docClient.update(options, function(err, data) {
+        // resolve the promise alway, irrespective of the error or success
+        deferred.resolve(subscriptions)
+      });
+    } else {
+      deferred.resolve(pref)
+    }
   } else {// always resolve
-    deferred.resolve()
+    deferred.resolve(pref)
   }
   return deferred.promise
 }
@@ -196,14 +212,13 @@ function afterPreferenceGet(pType, event, context, token) {
 function parsePreferenceBody(body, userId, pType) {
   if (pType) {
     if (pType.toLowerCase() === 'recentsearches') {
-      console.log(body.recentSearches)
       return body.recentSearches
     }
     if (pType.toLowerCase() === 'searchtabs') {
-      console.log(body.searchTabs)
       return body.searchTabs
     }
     if (pType.toLowerCase() === 'email') {
+      body.subscriptions.lastSyncTime = new Date().valueOf()
       return body.subscriptions
     }
   }
