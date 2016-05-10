@@ -143,21 +143,21 @@ xdescribe('When receiving a valid search request', function() {
 describe('When receiving a valid search request for email settings', function() {
   var resp = { success: null, error: null }
   const ctx = context()
-  DynamoDB.query = function(options, callback) {
-    callback.apply(DynamoDB, [null, {
-      Items: [
-        {
-          email: {
-            M : {
-              'TOPCODER_NL_DEV' : true,
-              'TOPCODER_NL_DESIGN' : true,
-              'TOPCODER_NL_DATA' : false
-            }
-          }
-        }
-      ]
-    }])
-  }
+  // DynamoDB.query = function(options, callback) {
+  //   callback.apply(DynamoDB, [null, {
+  //     Items: [
+  //       {
+  //         email: {
+  //           M : {
+  //             'TOPCODER_NL_DEV' : true,
+  //             'TOPCODER_NL_DESIGN' : true,
+  //             'TOPCODER_NL_DATA' : false
+  //           }
+  //         }
+  //       }
+  //     ]
+  //   }])
+  // }
   DocumentClient.get = function(options, callback) {
     callback.apply(DocumentClient, [null, {
       Item: {

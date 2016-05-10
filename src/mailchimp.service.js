@@ -51,7 +51,6 @@ exports.updateSubscriptions = function(email, data) {
 exports.getSubscription = function(email) {
   var memberUrl = MAILCHIMP_LISTS_URL + '/' + TOPCODER_MEMBERS_LIST_ID + '/members/'
   memberUrl += md5(email)
-  console.log(memberUrl)
   var options = {
     uri: memberUrl,
     method: 'GET',

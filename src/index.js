@@ -78,7 +78,7 @@ exports.handler = function(event, context) {
         return
       }
 
-      docClient.update(options, function(err) {
+      docClient.update(options, function(err, data) {
         if(!err) {
           afterPreferenceUpdate(pType, event, context, token).then(function() {
             context.succeed(wrapResponse(context, 200, null, pType))
@@ -120,7 +120,6 @@ exports.handler = function(event, context) {
         console.log(data)
         if(!err && data && data.Item) { // TODO we can check for more than one matched records
           var pref = data.Item;
-          console.log(data)
           afterPreferenceGet(pType, event, context, token).then(function() {
             console.log('Content', JSON.stringify(pref, null, 2))
             context.succeed(wrapResponse(context, 200, pref, pType))
@@ -170,9 +169,11 @@ function checkParamsForPreference(pType, event, context, token) {
 function afterPreferenceUpdate(pType, event, context, token) {
   var deferred = Q.defer();
   if (pType.toLowerCase() === 'email') {
-    mailchimp.updateSubscriptions(token.email, event.body)
+    mailchimp.updateSubscriptions(token.email, event.body).then(function() {
+      deferred.resolve()
+    })
     // fire and forget the mailchimp call and resolve promise immediately
-    deferred.resolve()
+    // deferred.resolve()
   } else {// always resolve
     deferred.resolve()
   }
