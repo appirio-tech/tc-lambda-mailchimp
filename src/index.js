@@ -245,12 +245,6 @@ function getOperation(event, context) {
         return 'VIEW_PREFERENCE'
       }
       break
-    case 'POST':
-      var regex = new RegExp(/\/users\/\{userId\}\/preferences\/\{preferenceType\}/)
-      if (regex.test(resourcePath)) {
-        return 'ADD_PERFERENCE'
-      }
-      break
     case 'PUT':
       var regex = new RegExp(/\/users\/\{userId\}\/preferences\/\{preferenceType\}/)
       if (regex.test(resourcePath)) {
